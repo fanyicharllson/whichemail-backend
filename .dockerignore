@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+.env.*
+pnpm-lock.yaml
+.pnpm-store
+.DS_Store
+npm-debug.log*
+logs
+coverage
+.idea
+.vscode
