@@ -6,7 +6,12 @@ services:
       - '3000:3000'
     env_file:
       - .env
-    depends_on: [] # if you want to run a local postgres service, add it here
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Optional local Postgres for development -- uncomment to use
   # db:

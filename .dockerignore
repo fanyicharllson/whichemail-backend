@@ -1,12 +1,13 @@
+# Allow lockfiles
+!pnpm-lock.yaml
+!package-lock.json
+
+# Ignore other files
 node_modules
-dist
+npm-debug.log
 .env
-.env.*
-pnpm-lock.yaml
-.pnpm-store
-.DS_Store
-npm-debug.log*
-logs
-coverage
-.idea
-.vscode
+.git
+.gitignore
+dist
+build
+*.log
