@@ -4,11 +4,11 @@ import prisma from "../prisma/client";
 export const getAllSoftware = async (req: Request, res: Response) => {
   const {
     page = "1",
-    perPage = "20",
+    limit = "8",  // Changed from perPage to limit to match frontend
     category,
     platform,
     tags,
-    q,
+    search,  // Changed from 'q' to 'search' to match frontend
     featured,
     minPrice,
     maxPrice,
@@ -17,12 +17,12 @@ export const getAllSoftware = async (req: Request, res: Response) => {
   } = req.query as Record<string, string>;
 
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
-  const per = Math.min(100, Math.max(1, parseInt(perPage, 10) || 20));
+  const per = Math.min(100, Math.max(1, parseInt(limit, 10) || 8));
 
   const where: any = {};
 
   if (category) {
-    // allow filtering by category slug or id
+    // Filter by category slug to match frontend
     where.category = { slug: category };
   }
 
@@ -37,7 +37,7 @@ export const getAllSoftware = async (req: Request, res: Response) => {
   }
 
   if (platform) {
-    // for String[] fields in Postgres, use has
+    // For String[] fields in Postgres, use has
     where.platform = { has: platform };
   }
 
@@ -45,10 +45,11 @@ export const getAllSoftware = async (req: Request, res: Response) => {
     where.tags = { has: tags };
   }
 
-  if (q) {
+  // Changed from 'q' to 'search'
+  if (search) {
     where.OR = [
-      { name: { contains: q, mode: "insensitive" } },
-      { description: { contains: q, mode: "insensitive" } },
+      { name: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
     ];
   }
 
@@ -68,13 +69,24 @@ export const getAllSoftware = async (req: Request, res: Response) => {
     ]);
 
     const totalPages = Math.ceil(total / per);
+    
+    // Updated response format to match frontend expectations
     return res.json({
+      success: true,
       data: items,
-      meta: { total, page: pageNum, perPage: per, totalPages },
+      pagination: {
+        total,
+        page: pageNum,
+        limit: per,
+        totalPages
+      }
     });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ 
+      success: false,
+      message: "Internal server error" 
+    });
   }
 };
 
@@ -85,12 +97,89 @@ export const getSoftwareById = async (req: Request, res: Response) => {
       where: { id },
       include: { category: true },
     });
-    if (!item) return res.status(404).json({ message: "Software Not found!" });
-    return res.json(item);
+    if (!item) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Software not found!" 
+      });
+    }
+    return res.json({
+      success: true,
+      data: item
+    });
   } catch (err) {
     console.error(err);
-    return res
-      .status(500)
-      .json({ message: "Internal server error! please try again" });
+    return res.status(500).json({ 
+      success: false,
+      message: "Internal server error! Please try again" 
+    });
+  }
+};
+
+// New endpoint to get software by slug (for better URLs)
+export const getSoftwareBySlug = async (req: Request, res: Response) => {
+  const { slug } = req.params;
+  try {
+    const item = await prisma.software.findUnique({
+      where: { slug },
+      include: { category: true },
+    });
+    if (!item) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Software not found!" 
+      });
+    }
+    return res.json({
+      success: true,
+      data: item
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ 
+      success: false,
+      message: "Internal server error! Please try again" 
+    });
+  }
+};
+
+// New endpoint to get all categories
+export const getAllCategories = async (req: Request, res: Response) => {
+  try {
+    const categories = await prisma.category.findMany({
+      orderBy: { name: 'asc' }
+    });
+    return res.json({
+      success: true,
+      data: categories
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ 
+      success: false,
+      message: "Failed to fetch categories" 
+    });
+  }
+};
+
+// New endpoint to get featured software
+export const getFeaturedSoftware = async (req: Request, res: Response) => {
+  try {
+    const featured = await prisma.software.findMany({
+      where: { featured: true },
+      include: { category: true },
+      orderBy: { createdAt: 'desc' },
+      take: 6
+    });
+    return res.json({
+      success: true,
+      data: featured
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ 
+      success: false,
+      message: "Failed to fetch featured software" 
+    });
   }
 };
